@@ -1,6 +1,6 @@
 name: Build DEB
 
-on:
+'on':
   push:
 标签:
       - 'v*'
