@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="128" height="128" viewBox="0 0 128 128"
+     xmlns="http://www.w3.org/2000/svg">
+  <!-- Ubuntu 橙 -->
+  <rect x="8" y="8" width="112" height="112" rx="24" fill="#E95420"/>
+  <!-- 桌面 -->
+  <rect x="28" y="36" width="72" height="48" rx="6" fill="#ffffff"/>
+  <!-- 桌面内容 -->
+  <rect x="36" y="46" width="24" height="24" rx="4" fill="#E95420"/>
+  <rect x="66" y="46" width="24" height="6"  rx="3" fill="#77216F"/>
+  <rect x="66" y="58" width="24" height="6"  rx="3" fill="#77216F"/>
+  <!-- 底座 -->
+  <rect x="50" y="88" width="28" height="6" rx="3" fill="#ffffff"/>
+  <rect x="42" y="96" width="44" height="6" rx="3" fill="#ffffff"/>
+</svg>

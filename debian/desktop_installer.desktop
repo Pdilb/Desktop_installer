@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Desktop Installer
+Name[zh_CN]=桌面安装器
+Comment=Add .desktop shortcuts of installed deb/snap packages to desktop
+Comment[zh_CN]=将已安装 deb/snap 包的快捷方式添加到桌面
+Exec=desktop_installer
+Icon=desktop_installer
+Terminal=false
+Categories=Utility;System;
+Keywords=desktop;shortcut;deb;snap;installer;
+StartupNotify=true

@@ -1,0 +1,8 @@
+desktop-installer (0.1.0) resolute; urgency=medium
+
+  * Initial release.
+  * Scan installed deb and snap packages for .desktop files.
+  * Batch add selected shortcuts to the desktop.
+  * Follow Ubuntu accent color and dark/light mode.
+
+ -- Pdilb <Pdilb@users.noreply.github.com>  Thu, 01 Jan 2026 00:00:00 +0800

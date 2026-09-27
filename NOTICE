@@ -1,0 +1,16 @@
+desktop_installer
+Copyright (c) 2026 Pdilb
+https://github.com/Pdilb/desktop_installer
+
+Licensed under the PolyForm Noncommercial License 1.0.0.
+You may modify and redistribute this software, provided that
+this NOTICE and the LICENSE file are retained, and that the
+software is not used for commercial purposes.
+
+This software uses the following third-party components:
+
+  - PySide6 (LGPL v3 / commercial)
+    Copyright (c) The Qt Company Ltd.
+    https://www.qt.io/qt-for-python
+
+Required Notice: Copyright (c) 2026 Pdilb
