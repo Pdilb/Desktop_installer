@@ -2,8 +2,8 @@ name: Build DEB
 
 'on':
   push:
-标签:
-      - 'v*'
+tags:
+      -'v*'
   workflow_dispatch:
 
 permissions:
