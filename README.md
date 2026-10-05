@@ -6,7 +6,10 @@
 
 ## 截图
 
-> 待补充
+<img width="2880" height="1704" alt="截图 2026-10-05 14-18-45" src="https://github.com/user-attachments/assets/d2d3918e-6717-4216-8b4e-8650f4e72804" />
+<img width="2880" height="1704" alt="截图 2026-10-05 14-19-24" src="https://github.com/user-attachments/assets/3f3bcd00-560c-4bc2-9bbd-836c9bac0fc7" />
+<img width="687" height="498" alt="截图 2026-10-05 14-20-05" src="https://github.com/user-attachments/assets/5a649ffb-b2d5-4a45-9bcc-fa3a6ca196d4" />
+<img width="963" height="681" alt="截图 2026-10-05 14-20-38" src="https://github.com/user-attachments/assets/591b9426-2555-4ba9-873d-d81256178f2e" />
 
 ## 功能
 
