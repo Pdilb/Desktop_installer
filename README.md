@@ -2,6 +2,9 @@
 
 一键把已安装的 **deb** 和 **snap** 包的 `.desktop` 快捷方式添加到桌面，并自动添加可执行权限。
 
+备用安装链接：
+https://pan.baidu.com/s/1qGQrgitjxIZy9ub7Ajm1QA?pwd=1bng
+
 专为 Ubuntu 设计，跟随系统深浅色模式与强调色。
 
 ## 截图
