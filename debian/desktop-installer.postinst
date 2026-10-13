@@ -1,0 +1,53 @@
+#!/bin/sh
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+# Copyright (c) 2026 Pdilb
+#
+# 安装后：为每个已登录用户把 desktop_installer.desktop 复制到桌面。
+
+set -e
+
+# Debian 打包脚本规定：只有 configure 阶段才执行
+if [ "$1" != "configure" ]; then
+    exit 0
+fi
+
+# 找到所有真实用户的 HOME（UID >= 1000 且不是 nobody）
+for home in /home/*; do
+    [ -d "$home" ] || continue
+    user=$(basename "$home")
+    uid=$(id -u "$user" 2>/dev/null || echo 0)
+    [ "$uid" -ge 1000 ] || continue
+
+    # 用 xdg-user-dir 获取实际桌面路径（若可用）
+    desktop_dir=""
+    if command -v sudo >/dev/null 2>&1; then
+        desktop_dir=$(sudo -u "$user" XDG_RUNTIME_DIR="/run/user/$uid" xdg-user-dir DESKTOP 2>/dev/null || true)
+    fi
+    [ -n "$desktop_dir" ] || desktop_dir="$home/Desktop"
+    [ -d "$desktop_dir" ] || desktop_dir="$home/桌面"
+
+    # 桌面目录不存在则跳过（用户可能还没登录过）
+    [ -d "$desktop_dir" ] || continue
+
+    src="/usr/share/applications/desktop_installer.desktop"
+    dst="$desktop_dir/desktop_installer.desktop"
+
+    # 已经存在就不覆盖
+    if [ -e "$dst" ]; then
+        continue
+    fi
+
+    # 复制 + 加执行权限
+    cp "$src" "$dst" 2>/dev/null || continue
+    chmod +x "$dst" 2>/dev/null || true
+    chown "$user":"$user" "$dst" 2>/dev/null || true
+
+    # GNOME 标记 trusted
+    if command -v gio >/dev/null 2>&1; then
+        sudo -u "$user" gio set "$dst" metadata::trusted true 2>/dev/null || true
+    fi
+
+    echo "desktop_installer: shortcut added to $dst"
+done
+
+exit 0

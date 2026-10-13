@@ -1,2 +1,4 @@
 desktop_installer /usr/lib/python3/dist-packages
 assets/desktop_installer.svg /usr/share/icons/hicolor/scalable/apps
+debian/desktop_installer.1 /usr/share/man/man1
+debian/desktop_installer.desktop /usr/share/applications

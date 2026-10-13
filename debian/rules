@@ -2,3 +2,14 @@
 
 %:
 	dh $@ --with python3 --buildsystem=pybuild
+
+override_dh_auto_build:
+	dh_auto_build
+	lrelease desktop_installer/i18n/desktop_installer_zh_CN.ts
+	lrelease desktop_installer/i18n/desktop_installer_en_US.ts
+
+override_dh_auto_install:
+	dh_auto_install
+	install -d debian/desktop-installer/usr/share/desktop_installer/i18n
+	install -m 644 desktop_installer/i18n/*.qm \
+	    debian/desktop-installer/usr/share/desktop_installer/i18n/

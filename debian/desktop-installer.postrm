@@ -1,0 +1,30 @@
+#!/bin/sh
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+# Copyright (c) 2026 Pdilb
+#
+# 卸载时：删除用户桌面上的快捷方式。
+
+set -e
+
+if [ "$1" != "remove" ] && [ "$1" != "purge" ]; then
+    exit 0
+fi
+
+for home in /home/*; do
+    [ -d "$home" ] || continue
+    user=$(basename "$home")
+    uid=$(id -u "$user" 2>/dev/null || echo 0)
+    [ "$uid" -ge 1000 ] || continue
+
+    for d in "$home/Desktop" "$home/桌面"; do
+        [ -d "$d" ] || continue
+        f="$d/desktop_installer.desktop"
+        [ -e "$f" ] && rm -f "$f" 2>/dev/null || true
+        # 清理可能的重命名版本
+        for i in $(seq 1 9); do
+            [ -e "$d/desktop_installer($i).desktop" ] && rm -f "$d/desktop_installer($i).desktop" 2>/dev/null || true
+        done
+    done
+done
+
+exit 0

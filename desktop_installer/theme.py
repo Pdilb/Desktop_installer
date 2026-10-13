@@ -1,26 +1,25 @@
 # SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 # Copyright (c) 2026 Pdilb
-"""Ubuntu 风味：读取强调色、跟随深浅色。"""
+"""Ubuntu 风味：读取强调色、跟随深浅色、实时响应主题切换。"""
 from __future__ import annotations
 
 import subprocess
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QApplication
 
 
 # Ubuntu 预设强调色 → RGB
 ACCENT_COLORS = {
-    "orange":   "#E95420",
-    "blue":     "#0073E5",  # Ubuntu 22.10+ 默认
-    "purple":   "#9141AC",
-    "pink":     "#E91E63",
-    "red":      "#E62D42",
-    "teal":     "#2190A4",
-    "green":    "#3A944A",
-    "yellow":   "#C88800",
-    "grey":     "#5E5C64",
+    "orange": "#E95420",
+    "blue":   "#0073E5",
+    "purple": "#9141AC",
+    "pink":   "#E91E63",
+    "red":    "#E62D42",
+    "teal":   "#2190A4",
+    "green":  "#3A944A",
+    "yellow": "#C88800",
+    "slate":  "#5E5C64",
 }
 
 
@@ -47,20 +46,15 @@ def is_dark_mode(app: QApplication) -> bool:
         return False
 
 
-def apply_theme(app: QApplication) -> None:
-    """
-    应用 Ubuntu 风味：跟随深浅色 + 用强调色高亮选中项。
-    """
-    accent = read_accent_color()
-    dark = is_dark_mode(app)
-
+def build_stylesheet(accent: str, dark: bool) -> str:
+    """根据强调色和深浅模式生成 QSS。"""
     bg = "#1e1e1e" if dark else "#ffffff"
     fg = "#f2f2f2" if dark else "#2e3436"
     base = "#2b2b2b" if dark else "#f6f5f4"
     alt = "#333333" if dark else "#f0efed"
     border = "#3d3d3d" if dark else "#d3d0cb"
 
-    qss = f"""
+    return f"""
     QWidget {{
         background-color: {bg};
         color: {fg};
@@ -130,4 +124,26 @@ def apply_theme(app: QApplication) -> None:
         color: {fg};
     }}
     """
-    app.setStyleSheet(qss)
+
+
+def apply_theme(app: QApplication) -> None:
+    """应用当前主题（供启动和主题切换时调用）。"""
+    accent = read_accent_color()
+    dark = is_dark_mode(app)
+    app.setStyleSheet(build_stylesheet(accent, dark))
+
+
+def watch_color_scheme(app: QApplication, callback=None) -> None:
+    """监听系统深浅色切换，实时重新应用主题。"""
+    hints = app.styleHints()
+
+    def _on_change(_scheme):
+        apply_theme(app)
+        if callback:
+            callback()
+
+    try:
+        hints.colorSchemeChanged.connect(_on_change)
+    except AttributeError:
+        # Qt < 6.5 不支持，静默忽略
+        pass

@@ -11,20 +11,54 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+from PySide6.QtCore import QStandardPaths
+
 
 # ---------- 数据结构 ----------
 
 @dataclass
 class DesktopEntry:
     """一个可添加到桌面的 .desktop 条目。"""
-    package: str          # 包名
-    path: Path            # .desktop 完整路径
-    install_time: datetime  # 安装时间
-    source: str           # "deb" 或 "snap"
+    package: str
+    path: Path
+    install_time: datetime
+    source: str            # "deb" 或 "snap"
+    already_added: bool = False   # 桌面上是否已存在同名 .desktop
 
     @property
     def display_path(self) -> str:
         return str(self.path)
+
+
+# ---------- 桌面目录 ----------
+
+def get_desktop_dir() -> Path:
+    """获取当前用户的桌面目录（自动兼容中文“桌面”）。"""
+    loc = QStandardPaths.writableLocation(QStandardPaths.DesktopLocation)
+    if not loc:
+        loc = str(Path.home() / "Desktop")
+    path = Path(loc)
+    return path
+
+
+def _is_already_added(desktop_file: Path, desktop_dir: Path | None = None) -> bool:
+    """检查桌面上是否已存在同名或同名重命名版本。"""
+    if desktop_dir is None:
+        desktop_dir = get_desktop_dir()
+    if not desktop_dir.is_dir():
+        return False
+
+    name = desktop_file.name
+    if (desktop_dir / name).exists():
+        return True
+
+    # 检查 name(1).desktop / name(2).desktop ...
+    stem = desktop_file.stem
+    suffix = desktop_file.suffix
+    for i in range(1, 20):
+        if (desktop_dir / f"{stem}({i}){suffix}").exists():
+            return True
+    return False
 
 
 # ---------- 公共工具 ----------
@@ -65,7 +99,6 @@ def _deb_owner(desktop_file: Path) -> str | None:
         return None
     if out.returncode != 0:
         return None
-    # 输出形如：sogo: /usr/share/applications/sogo.desktop
     first = out.stdout.splitlines()[0] if out.stdout else ""
     if ":" in first:
         return first.split(":", 1)[0].strip()
@@ -80,7 +113,7 @@ def _deb_install_time(package: str) -> datetime:
     return datetime.fromtimestamp(0)
 
 
-def scan_deb() -> list[DesktopEntry]:
+def scan_deb(desktop_dir: Path | None = None) -> list[DesktopEntry]:
     """扫描系统里所有 deb 包的 .desktop 文件。"""
     entries: list[DesktopEntry] = []
     seen: set[Path] = set()
@@ -95,7 +128,6 @@ def scan_deb() -> list[DesktopEntry]:
 
             owner = _deb_owner(desktop_file)
             if not owner:
-                # 无归属包（例如手动放的），跳过
                 continue
 
             entries.append(DesktopEntry(
@@ -103,6 +135,7 @@ def scan_deb() -> list[DesktopEntry]:
                 path=desktop_file,
                 install_time=_deb_install_time(owner),
                 source="deb",
+                already_added=_is_already_added(desktop_file, desktop_dir),
             ))
     return entries
 
@@ -131,7 +164,6 @@ def _load_snap_install_times() -> dict[str, datetime]:
         install_date = info.get("install-date")
         if not install_date:
             continue
-        # 格式类似 2025-07-06T10:00:00Z
         try:
             cleaned = install_date.replace("Z", "+00:00")
             times[name] = datetime.fromisoformat(cleaned).astimezone()
@@ -148,7 +180,7 @@ def _snap_from_desktop_name(desktop_file: Path) -> str | None:
     return stem
 
 
-def scan_snap() -> list[DesktopEntry]:
+def scan_snap(desktop_dir: Path | None = None) -> list[DesktopEntry]:
     """扫描系统里所有 snap 包的 .desktop 文件。"""
     entries: list[DesktopEntry] = []
     install_times = _load_snap_install_times()
@@ -166,12 +198,13 @@ def scan_snap() -> list[DesktopEntry]:
                 path=desktop_file,
                 install_time=install_time,
                 source="snap",
+                already_added=_is_already_added(desktop_file, desktop_dir),
             ))
     return entries
 
 
 # ---------- 聚合 ----------
 
-def scan_all() -> tuple[list[DesktopEntry], list[DesktopEntry]]:
+def scan_all(desktop_dir: Path | None = None) -> tuple[list[DesktopEntry], list[DesktopEntry]]:
     """返回 (deb_entries, snap_entries)。"""
-    return scan_deb(), scan_snap()
+    return scan_deb(desktop_dir), scan_snap(desktop_dir)

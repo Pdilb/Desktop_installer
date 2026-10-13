@@ -1,0 +1,74 @@
+.\" SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+.\" Copyright (c) 2026 Pdilb
+.TH DESKTOP_INSTALLER 1 "2026-10-05" "desktop_installer 2.0.0" "User Commands"
+.SH NAME
+desktop_installer \- add .desktop shortcuts of installed deb/snap packages to your desktop
+.SH SYNOPSIS
+.B desktop_installer
+.br
+.B dtier
+.SH DESCRIPTION
+.B desktop_installer
+scans all installed
+.BR deb (5)
+and
+.B snap
+packages, lists their
+.B .desktop
+files, and lets you add selected shortcuts to your desktop with a single click.
+.PP
+It automatically adds executable permissions and, on GNOME, marks the shortcut as trusted.
+No
+.B sudo
+is required — everything runs with the current user's privileges.
+.SH OPTIONS
+.TP
+.B \-\-version
+Show version and exit.
+.TP
+.B \-\-help
+Show help message and exit.
+.SH USAGE
+.TP
+1.
+Switch to the
+.B deb
+or
+.B snap
+tab.
+.TP
+2.
+Use the sort dropdown to choose a sorting order.
+.TP
+3.
+Check the packages you want to add.
+.TP
+4.
+Click
+.B Add
+at the bottom right.
+.TP
+5.
+If a file with the same name already exists on the desktop, choose
+.BR overwrite ,
+.B rename
+or
+.BR skip .
+.SH FILES
+.TP
+.I /usr/share/applications/*.desktop
+Source of deb package shortcuts.
+.TP
+.I /var/lib/snapd/desktop/applications/*.desktop
+Source of snap package shortcuts.
+.TP
+.I ~/Desktop
+Target directory (resolved via XDG user dirs).
+.SH AUTHOR
+Pdilb <https://github.com/Pdilb>
+.SH LICENSE
+PolyForm Noncommercial License 1.0.0
+<https://polyformproject.org/licenses/noncommercial/1.0.0>
+.br
+You may modify and redistribute this software provided that the original author is credited.
+Commercial use is prohibited.

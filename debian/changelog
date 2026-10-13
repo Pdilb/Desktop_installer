@@ -1,4 +1,4 @@
-desktop-installer (0.1.0) resolute; urgency=medium
+desktop-installer (2.0.0) resolute; urgency=medium
 
   * Initial release.
   * Scan installed deb and snap packages for .desktop files.
