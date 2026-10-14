@@ -1,0 +1,79 @@
+name: Update APT repository
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-apt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          path: main
+
+      - name: Checkout gh-pages
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages
+        continue-on-error: true
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y reprepro gnupg
+
+      - name: Import GPG key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+
+      - name: Download deb from release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p /tmp/deb-out
+          cd main
+          gh release download --pattern '*.deb' --dir /tmp/deb-out
+
+      - name: Init gh-pages structure
+        run: |
+          cd gh-pages
+          if [ ! -f conf/distributions ]; then
+            mkdir -p conf
+            cat > conf/distributions <<EOF
+          Origin: Pdilb
+          Label: Desktop Installer
+          Codename: stable
+          Architectures: amd64 arm64 source
+          Components: main
+          Description: APT repository for desktop_installer
+          SignWith: ${{ secrets.GPG_KEY_ID }}
+          EOF
+          fi
+          ls -la
+
+      - name: Add deb to repo
+        run: |
+          cd gh-pages
+          for f in /tmp/deb-out/*.deb; do
+            reprepro -b . includedeb stable "$f" || true
+          done
+          reprepro -b . export stable
+
+      - name: Push gh-pages
+        run: |
+          cd gh-pages
+          git config user.name "Pdilb"
+          git config user.email "Pdilb@users.noreply.github.com"
+          git add -A
+          git commit -m "Update APT repository" || echo "nothing to commit"
+          git push origin gh-pages
