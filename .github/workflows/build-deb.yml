@@ -21,7 +21,17 @@ jobs:
         timeout-minutes: 8
         run: |
           sudo apt-get update -o Acquire::Retries=3 -o Acquire::http::Timeout=30
+<<<<<<< HEAD
           sudo apt-get install -y build-essential debhelper devscripts dh-python python3-all python3-setuptools pybuild-plugin-pyproject qt6-l10n-tools python3-pyside6.qtsvg fakeroot lintian
+=======
+          sudo apt-get install -y build-essential debhelper devscripts dh-python python3-all python3-setuptools pybuild-plugin-pyproject qt6-l10n-tools qttools5-dev-tools python3-pyside6.qtsvg fakeroot lintian
+
+      - name: Debug lrelease
+        run: |
+          which lrelease || true
+          which lrelease6 || true
+          ls -la /usr/lib/qt6/bin/ 2>/dev/null || true
+>>>>>>> e3aa30db65aafe377b2367592cd366dae0283d98
 
       - name: Fix permissions
         run: chmod +x debian/rules debian/desktop-installer.postinst debian/desktop-installer.postrm
