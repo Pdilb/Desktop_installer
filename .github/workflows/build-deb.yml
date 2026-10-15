@@ -28,7 +28,7 @@ jobs:
             fakeroot lintian
 
       - name: Fix permissions
-        run: chmod +x debian/rules debian/desktop_installer.postinst debian/desktop_installer.postrm
+        run: chmod +x debian/rules debian/desktop-installer.postinst debian/desktop-installer.postrm
 
       - name: Build package
         run: |
