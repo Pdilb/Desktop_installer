@@ -5,8 +5,9 @@
 
 override_dh_auto_build:
 	dh_auto_build
-	lrelease desktop_installer/i18n/desktop_installer_zh_CN.ts
-	lrelease desktop_installer/i18n/desktop_installer_en_US.ts
+	LRELEASE=$$(command -v lrelease6 || command -v lrelease || command -v /usr/lib/qt6/bin/lrelease || echo lrelease); \
+	$$LRELEASE desktop_installer/i18n/desktop_installer_zh_CN.ts; \
+	$$LRELEASE desktop_installer/i18n/desktop_installer_en_US.ts
 
 override_dh_auto_install:
 	dh_auto_install
