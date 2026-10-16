@@ -1,0 +1,5 @@
+Component: main
+Origin: Pdilb
+Label: Desktop Installer
+Architecture: amd64
+Description: APT repository for desktop_installer

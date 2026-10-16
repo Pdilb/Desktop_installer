@@ -1,0 +1,37 @@
+Origin: Pdilb
+Label: Desktop Installer
+Codename: stable
+Date: Fri, 16 Oct 2026 11:23:21 UTC
+Architectures: amd64 arm64
+Components: main
+Description: APT repository for desktop_installer
+MD5Sum:
+ 13307a7fcd9e2e7c06214c4c02465160 1194 main/binary-amd64/Packages
+ 4e079869d84b0e0f2bf55bcf3f539ec0 696 main/binary-amd64/Packages.gz
+ ace4f5cbf03d18ae5e6d3f990dbc6bb8 125 main/binary-amd64/Release
+ 13307a7fcd9e2e7c06214c4c02465160 1194 main/binary-arm64/Packages
+ 4e079869d84b0e0f2bf55bcf3f539ec0 696 main/binary-arm64/Packages.gz
+ 4a2549d0dfa29dea082655bae9a0f508 125 main/binary-arm64/Release
+ d41d8cd98f00b204e9800998ecf8427e 0 main/source/Sources
+ 7029066c27ac6f5ef18d660d5741979a 20 main/source/Sources.gz
+ d49dbe6ff81408a56a2cc6fd7e26f707 126 main/source/Release
+SHA1:
+ 2726c7d93fdff537a579c3d9b7dedd76c1462b7d 1194 main/binary-amd64/Packages
+ bc4683cade8dc2499db6c76a2b3f0860fc0c571b 696 main/binary-amd64/Packages.gz
+ fbdc423450fde0b2d8331ea70bdb056b0e460026 125 main/binary-amd64/Release
+ 2726c7d93fdff537a579c3d9b7dedd76c1462b7d 1194 main/binary-arm64/Packages
+ bc4683cade8dc2499db6c76a2b3f0860fc0c571b 696 main/binary-arm64/Packages.gz
+ dc7a5b1fcaa3f76f94f0234d9281d807fd3bb4be 125 main/binary-arm64/Release
+ da39a3ee5e6b4b0d3255bfef95601890afd80709 0 main/source/Sources
+ 46c6643f07aa7f6bfe7118de926b86defc5087c4 20 main/source/Sources.gz
+ 5dd39c57faedc515a0a06cdb5e9f9f6ac0bc6333 126 main/source/Release
+SHA256:
+ c054f0796d3e2d93b537ecc61474042ecc9bd905962219b54796470e7a32264f 1194 main/binary-amd64/Packages
+ 2b269f674d4268573b1f4e41282f501c4785c0ed5291192b592fe17d9fe66190 696 main/binary-amd64/Packages.gz
+ 1f1dc13db2da9ce027d3d5a4fdceb74b2f83c2d546549704593e82ad718548a4 125 main/binary-amd64/Release
+ c054f0796d3e2d93b537ecc61474042ecc9bd905962219b54796470e7a32264f 1194 main/binary-arm64/Packages
+ 2b269f674d4268573b1f4e41282f501c4785c0ed5291192b592fe17d9fe66190 696 main/binary-arm64/Packages.gz
+ c76607c0787e05202b34f31eb10fbc747f46b8ef7b3367a44cd5abea392ebeda 125 main/binary-arm64/Release
+ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 main/source/Sources
+ 59869db34853933b239f1e2219cf7d431da006aa919635478511fabbfc8849d2 20 main/source/Sources.gz
+ 33ae81d289d29525394e0d0dd237d3334ad8c9c52decfdb12305198c88fd6bc3 126 main/source/Release

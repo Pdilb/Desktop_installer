@@ -1,0 +1,7 @@
+Origin: Pdilb
+Label: Desktop Installer
+Codename: stable
+Architectures: amd64 arm64 source
+Components: main
+Description: APT repository for desktop_installer
+SignWith: E2EABA8E6EB1D1EE

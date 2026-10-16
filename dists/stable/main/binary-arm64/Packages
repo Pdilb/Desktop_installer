@@ -1,0 +1,30 @@
+Package: desktop-installer
+Version: 2.0.0
+Architecture: all
+Maintainer: Pdilb <Pdilb@users.noreply.github.com>
+Installed-Size: 94
+Depends: python3:any, python3-pyside6.qtwidgets, python3-pyside6.qtcore, python3-pyside6.qtgui, python3-pyside6.qtsvg, dpkg, libglib2.0-bin
+Homepage: https://github.com/Pdilb/Desktop_installer
+Priority: optional
+Section: utils
+Filename: pool/main/d/desktop-installer/desktop-installer_2.0.0_all.deb
+Size: 18112
+SHA256: 34bd2fd570f6e5be887d157c7b2375bbd12076e55deb1b82b7be3370c481d6b8
+SHA1: 6e00cf0ae1d76ae7cc0819aefd39943256177372
+MD5sum: 32a682735f358ab20f0f10b316b5bff1
+Description: Add .desktop shortcuts of installed deb/snap packages to desktop
+ desktop_installer (command: dtier) scans installed deb and snap
+ packages, lists their .desktop files, and lets the user add selected
+ shortcuts to the desktop with a single click.
+ .
+ Features:
+  * Tabs for deb and snap packages
+  * Sortable by name and install time
+  * Batch selection and installation
+  * Conflict resolution (overwrite / rename / skip)
+  * Added / not-added status column
+  * Real-time dark/light theme following
+  * Chinese / English UI
+  * Follows Ubuntu accent color
+  * No sudo required
+
