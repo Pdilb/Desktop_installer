@@ -114,3 +114,60 @@ def install_many(
         if on_progress:
             on_progress(i, total, entry)
     return results
+    
+# ---------- 批量移除 ----------
+
+@dataclass
+class RemoveResult:
+    package: str
+    target: Path | None
+    status: str   # "removed" / "not_found" / "error"
+    message: str = ""
+
+
+def _find_desktop_files(name: str, desktop_dir: Path) -> list[Path]:
+    """找出桌面上某个 .desktop 及其所有重命名版本。"""
+    results: list[Path] = []
+    base = desktop_dir / name
+    if base.exists():
+        results.append(base)
+
+    stem = Path(name).stem
+    suffix = Path(name).suffix
+    for i in range(1, 20):
+        candidate = desktop_dir / f"{stem}({i}){suffix}"
+        if candidate.exists():
+            results.append(candidate)
+    return results
+
+
+def remove_one(source: Path, desktop_dir: Path) -> RemoveResult:
+    """从桌面移除对应的 .desktop 文件（含所有重命名版本）。"""
+    files = _find_desktop_files(source.name, desktop_dir)
+    if not files:
+        return RemoveResult("", None, "not_found", "未找到")
+
+    errors: list[str] = []
+    for f in files:
+        try:
+            f.unlink()
+        except OSError as e:
+            errors.append(f"{f.name}: {e}")
+
+    if errors:
+        return RemoveResult("", None, "error", "; ".join(errors))
+    return RemoveResult("", None, "removed")
+
+
+def remove_many(entries, desktop_dir: Path, on_progress=None) -> list[RemoveResult]:
+    """批量移除。entries 为 scanner.DesktopEntry 列表。"""
+    results: list[RemoveResult] = []
+    total = len(entries)
+    for i, entry in enumerate(entries, 1):
+        res = remove_one(entry.path, desktop_dir)
+        res.package = entry.package
+        results.append(res)
+        if on_progress:
+            on_progress(i, total, entry)
+    return results
+

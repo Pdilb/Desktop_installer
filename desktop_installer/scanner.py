@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import json
-import os
 import re
 import subprocess
 from dataclasses import dataclass
@@ -22,8 +21,8 @@ class DesktopEntry:
     package: str
     path: Path
     install_time: datetime
-    source: str            # "deb" 或 "snap"
-    already_added: bool = False   # 桌面上是否已存在同名 .desktop
+    source: str
+    already_added: bool = False
 
     @property
     def display_path(self) -> str:
@@ -37,8 +36,7 @@ def get_desktop_dir() -> Path:
     loc = QStandardPaths.writableLocation(QStandardPaths.DesktopLocation)
     if not loc:
         loc = str(Path.home() / "Desktop")
-    path = Path(loc)
-    return path
+    return Path(loc)
 
 
 def _is_already_added(desktop_file: Path, desktop_dir: Path | None = None) -> bool:
@@ -52,25 +50,12 @@ def _is_already_added(desktop_file: Path, desktop_dir: Path | None = None) -> bo
     if (desktop_dir / name).exists():
         return True
 
-    # 检查 name(1).desktop / name(2).desktop ...
     stem = desktop_file.stem
     suffix = desktop_file.suffix
     for i in range(1, 20):
         if (desktop_dir / f"{stem}({i}){suffix}").exists():
             return True
     return False
-
-
-# ---------- 公共工具 ----------
-
-def _read_desktop_name(desktop_file: Path) -> str | None:
-    """尝试从 .desktop 读取 Name，用于兜底展示。"""
-    try:
-        text = desktop_file.read_text(encoding="utf-8", errors="ignore")
-    except OSError:
-        return None
-    m = re.search(r"^Name=(.+)$", text, re.MULTILINE)
-    return m.group(1).strip() if m else None
 
 
 def _safe_mtime(path: Path) -> datetime:
@@ -106,30 +91,32 @@ def _deb_owner(desktop_file: Path) -> str | None:
 
 
 def _deb_install_time(package: str) -> datetime:
-    """通过 /var/lib/dpkg/info/<pkg>.list 的 mtime 近似安装时间。"""
     list_file = Path("/var/lib/dpkg/info") / f"{package}.list"
     if list_file.exists():
         return _safe_mtime(list_file)
     return datetime.fromtimestamp(0)
 
 
-def scan_deb(desktop_dir: Path | None = None) -> list[DesktopEntry]:
+def scan_deb(desktop_dir: Path | None = None, on_progress=None) -> list[DesktopEntry]:
     """扫描系统里所有 deb 包的 .desktop 文件。"""
-    entries: list[DesktopEntry] = []
+    all_files: list[Path] = []
     seen: set[Path] = set()
 
     for app_dir in DEB_APPLICATION_DIRS:
         if not app_dir.is_dir():
             continue
-        for desktop_file in sorted(app_dir.glob("*.desktop")):
-            if desktop_file in seen:
+        for f in sorted(app_dir.glob("*.desktop")):
+            if f in seen:
                 continue
-            seen.add(desktop_file)
+            seen.add(f)
+            all_files.append(f)
 
-            owner = _deb_owner(desktop_file)
-            if not owner:
-                continue
+    total = len(all_files)
+    entries: list[DesktopEntry] = []
 
+    for i, desktop_file in enumerate(all_files, 1):
+        owner = _deb_owner(desktop_file)
+        if owner:
             entries.append(DesktopEntry(
                 package=owner,
                 path=desktop_file,
@@ -137,6 +124,10 @@ def scan_deb(desktop_dir: Path | None = None) -> list[DesktopEntry]:
                 source="deb",
                 already_added=_is_already_added(desktop_file, desktop_dir),
             ))
+        
+        if on_progress:
+            on_progress(i, total, desktop_file.name)
+
     return entries
 
 
@@ -145,12 +136,10 @@ def scan_deb(desktop_dir: Path | None = None) -> list[DesktopEntry]:
 SNAP_APPLICATION_DIRS = [
     Path("/var/lib/snapd/desktop/applications"),
 ]
-
 SNAP_STATE_FILE = Path("/var/lib/snapd/state.json")
 
 
 def _load_snap_install_times() -> dict[str, datetime]:
-    """从 snapd state.json 读取每个 snap 的安装时间。"""
     times: dict[str, datetime] = {}
     if not SNAP_STATE_FILE.exists():
         return times
@@ -173,25 +162,28 @@ def _load_snap_install_times() -> dict[str, datetime]:
 
 
 def _snap_from_desktop_name(desktop_file: Path) -> str | None:
-    """snap 的 desktop 文件命名通常是 <snap>_<app>.desktop 或 <snap>.desktop。"""
     stem = desktop_file.stem
     if "_" in stem:
         return stem.split("_", 1)[0]
     return stem
 
 
-def scan_snap(desktop_dir: Path | None = None) -> list[DesktopEntry]:
+def scan_snap(desktop_dir: Path | None = None, on_progress=None) -> list[DesktopEntry]:
     """扫描系统里所有 snap 包的 .desktop 文件。"""
-    entries: list[DesktopEntry] = []
-    install_times = _load_snap_install_times()
-
+    all_files: list[Path] = []
     for app_dir in SNAP_APPLICATION_DIRS:
         if not app_dir.is_dir():
             continue
-        for desktop_file in sorted(app_dir.glob("*.desktop")):
-            pkg = _snap_from_desktop_name(desktop_file)
-            if not pkg:
-                continue
+        for f in sorted(app_dir.glob("*.desktop")):
+            all_files.append(f)
+
+    total = len(all_files)
+    entries: list[DesktopEntry] = []
+    install_times = _load_snap_install_times()
+
+    for i, desktop_file in enumerate(all_files, 1):
+        pkg = _snap_from_desktop_name(desktop_file)
+        if pkg:
             install_time = install_times.get(pkg) or _safe_mtime(desktop_file)
             entries.append(DesktopEntry(
                 package=pkg,
@@ -200,11 +192,14 @@ def scan_snap(desktop_dir: Path | None = None) -> list[DesktopEntry]:
                 source="snap",
                 already_added=_is_already_added(desktop_file, desktop_dir),
             ))
+        
+        if on_progress:
+            on_progress(i, total, desktop_file.name)
+
     return entries
 
 
 # ---------- 聚合 ----------
 
 def scan_all(desktop_dir: Path | None = None) -> tuple[list[DesktopEntry], list[DesktopEntry]]:
-    """返回 (deb_entries, snap_entries)。"""
     return scan_deb(desktop_dir), scan_snap(desktop_dir)

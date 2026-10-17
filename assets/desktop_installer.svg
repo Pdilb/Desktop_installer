@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg width="256" height="256" viewBox="0 0 256 256"
      xmlns="http://www.w3.org/2000/svg">
-  <!-- 占位色 #FF0000 会被运行时替换为系统强调色 -->
-  <rect x="16" y="16" width="224" height="224" rx="48" fill="#FF0000"/>
+  <!-- 占位色 #FF0000 会被运行时替换为系统强调色#E95420 -->
+  <rect x="16" y="16" width="224" height="224" rx="48" fill="#E95420"/>
   <!-- 桌面 -->
   <rect x="56" y="72" width="144" height="96" rx="12" fill="#ffffff"/>
   <!-- 桌面内容 -->
-  <rect x="72" y="92" width="48" height="48" rx="8" fill="#FF0000"/>
+  <rect x="72" y="92" width="48" height="48" rx="8" fill="#E95420"/>
   <rect x="132" y="92" width="48" height="12" rx="6" fill="#77216F"/>
   <rect x="132" y="116" width="48" height="12" rx="6" fill="#77216F"/>
   <!-- 底座 -->

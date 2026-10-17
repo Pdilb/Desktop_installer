@@ -1,11 +1,9 @@
 # SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 # Copyright (c) 2026 Pdilb
-"""主窗口 UI：标签页 + 表格 + 排序下拉 + 状态列 + 关于入口。"""
+"""主窗口 UI：标签页 + 搜索 + 排序 + 状态列 + 添加/移除 + 异步扫描。"""
 from __future__ import annotations
 
-from datetime import datetime
-
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QThread, Signal, QEvent
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -14,6 +12,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
     QLabel,
+    QLineEdit,
     QMainWindow,
     QMessageBox,
     QPushButton,
@@ -22,16 +21,19 @@ from PySide6.QtWidgets import (
     QTabWidget,
     QVBoxLayout,
     QWidget,
+    QApplication,
 )
 
 from ..scanner import DesktopEntry, scan_deb, scan_snap, get_desktop_dir
 from ..installer import (
     ConflictAction,
     install_many,
+    remove_many,
 )
 from ..about_dialog import AboutDialog
-from .. import __app_display_name__, __version__
+from .. import __app_display_name__
 from .. import theme
+from .loading_dialog import LoadingDialog
 
 
 # ---------- 表格列 ----------
@@ -42,43 +44,77 @@ COL_STATUS = 3
 COL_CHECK = 4
 
 
-class PackageTable(QWidget):
-    """一个标签页内部的表格 + 排序下拉。"""
+# ---------- 后台扫描线程 ----------
 
-    def __init__(self, entries: list[DesktopEntry], source: str, parent=None):
+class _ScanWorker(QThread):
+    """后台扫描 deb / snap 包，并实时发送进度。"""
+    finished_scan = Signal(list, list)
+    progress = Signal(str, int, int, str)   # stage, current, total, name
+    stage_changed = Signal(str)             # stage
+
+    def __init__(self, desktop_dir, parent=None):
         super().__init__(parent)
-        self._entries = entries
+        self._desktop_dir = desktop_dir
+
+    def run(self):
+        try:
+            # ---- deb ----
+            self.stage_changed.emit("deb")
+            deb_entries = scan_deb(
+                self._desktop_dir,
+                on_progress=lambda c, t, n: self.progress.emit("deb", c, t, n),
+            )
+
+            # ---- snap ----
+            self.stage_changed.emit("snap")
+            snap_entries = scan_snap(
+                self._desktop_dir,
+                on_progress=lambda c, t, n: self.progress.emit("snap", c, t, n),
+            )
+
+            self.finished_scan.emit(deb_entries, snap_entries)
+        except Exception:
+            self.finished_scan.emit([], [])
+
+
+# ---------- 表格组件 ----------
+
+class PackageTable(QWidget):
+    """一个标签页内部的表格 + 搜索 + 排序下拉。"""
+
+    def __init__(self, source: str, parent=None):
+        super().__init__(parent)
+        self._entries: list[DesktopEntry] = []
         self._source = source
         self._build_ui()
-        self._populate()
 
-    # ---------- UI ----------
     def _build_ui(self) -> None:
         layout = QVBoxLayout(self)
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(8)
 
-        # 排序下拉
-        sort_row = QHBoxLayout()
-        sort_row.addStretch()
+        top_row = QHBoxLayout()
+        top_row.setSpacing(8)
+
+        self.search_label = QLabel(self.tr("Search:"))
+        self.search_edit = QLineEdit()
+        self.search_edit.setPlaceholderText(self.tr("Filter by name or path"))
+        self.search_edit.setClearButtonEnabled(True)
+        self.search_edit.textChanged.connect(self._populate)
+        top_row.addWidget(self.search_label)
+        top_row.addWidget(self.search_edit, stretch=1)
+
         self.sort_label = QLabel(self.tr("Sort:"))
         self.sort_combo = QComboBox()
         self._refresh_sort_options()
         self.sort_combo.currentIndexChanged.connect(self._populate)
-        sort_row.addWidget(self.sort_label)
-        sort_row.addWidget(self.sort_combo)
-        layout.addLayout(sort_row)
+        top_row.addWidget(self.sort_label)
+        top_row.addWidget(self.sort_combo)
 
-        # 表格
-        column_titles = [
-            self.tr("Package"),
-            self.tr("Path"),
-            self.tr("Installed"),
-            self.tr("Status"),
-            self.tr("Select"),
-        ]
-        self.table = QTableWidget(0, len(column_titles))
-        self.table.setHorizontalHeaderLabels(column_titles)
+        layout.addLayout(top_row)
+
+        self.table = QTableWidget(0, 5)
+        self._refresh_headers()
         self.table.verticalHeader().setVisible(False)
         self.table.setSelectionMode(QAbstractItemView.NoSelection)
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -97,8 +133,16 @@ class PackageTable(QWidget):
         self.table.itemChanged.connect(self._on_item_changed)
         layout.addWidget(self.table)
 
+    def _refresh_headers(self) -> None:
+        self.table.setHorizontalHeaderLabels([
+            self.tr("Package"),
+            self.tr("Path"),
+            self.tr("Installed"),
+            self.tr("Status"),
+            self.tr("Select"),
+        ])
+
     def _refresh_sort_options(self) -> None:
-        """重建排序选项（语言切换时也会重调）。"""
         current = self.sort_combo.currentIndex() if self.sort_combo.count() else 0
         self.sort_combo.blockSignals(True)
         self.sort_combo.clear()
@@ -111,44 +155,49 @@ class PackageTable(QWidget):
         self.sort_combo.setCurrentIndex(max(0, current))
         self.sort_combo.blockSignals(False)
 
-    # ---------- 数据填充 ----------
-    def _sorted_entries(self) -> list[DesktopEntry]:
+    def set_entries(self, entries: list[DesktopEntry]) -> None:
+        self._entries = entries
+        self._populate()
+
+    def _filtered_sorted(self) -> list[DesktopEntry]:
+        q = self.search_edit.text().strip().lower()
+        rows = self._entries
+        if q:
+            rows = [
+                e for e in rows
+                if q in e.package.lower() or q in str(e.path).lower()
+            ]
+
         idx = self.sort_combo.currentIndex()
         if idx == 0:
-            return sorted(self._entries, key=lambda e: e.package.lower())
+            return sorted(rows, key=lambda e: e.package.lower())
         if idx == 1:
-            return sorted(self._entries, key=lambda e: e.package.lower(), reverse=True)
+            return sorted(rows, key=lambda e: e.package.lower(), reverse=True)
         if idx == 2:
-            return sorted(self._entries, key=lambda e: e.install_time)
-        return sorted(self._entries, key=lambda e: e.install_time, reverse=True)
+            return sorted(rows, key=lambda e: e.install_time)
+        return sorted(rows, key=lambda e: e.install_time, reverse=True)
 
     def _populate(self) -> None:
         self.table.blockSignals(True)
-        rows = self._sorted_entries()
+        rows = self._filtered_sorted()
         self.table.setRowCount(len(rows))
 
         for r, entry in enumerate(rows):
-            # 包名
             name_item = QTableWidgetItem(entry.package)
             name_item.setData(Qt.UserRole, entry)
             self.table.setItem(r, COL_PACKAGE, name_item)
 
-            # 路径
             path_item = QTableWidgetItem(entry.display_path)
             path_item.setToolTip(entry.display_path)
             self.table.setItem(r, COL_PATH, path_item)
 
-            # 安装时间
             time_str = entry.install_time.strftime("%Y-%m-%d %H:%M")
-            time_item = QTableWidgetItem(time_str)
-            self.table.setItem(r, COL_TIME, time_item)
+            self.table.setItem(r, COL_TIME, QTableWidgetItem(time_str))
 
-            # 状态
             status_item = QTableWidgetItem(self._status_text(entry))
             status_item.setTextAlignment(Qt.AlignCenter)
             self.table.setItem(r, COL_STATUS, status_item)
 
-            # 勾选框
             cb = QCheckBox()
             cb.stateChanged.connect(self._on_check_changed)
             wrap = QWidget()
@@ -162,11 +211,8 @@ class PackageTable(QWidget):
         self._on_check_changed()
 
     def _status_text(self, entry: DesktopEntry) -> str:
-        if entry.already_added:
-            return self.tr("✅ Added")
-        return self.tr("➕ Not added")
+        return self.tr("✅ Added") if entry.already_added else self.tr("➕ Not added")
 
-    # ---------- 勾选状态 ----------
     def _iter_checkboxes(self):
         for r in range(self.table.rowCount()):
             wrap = self.table.cellWidget(r, COL_CHECK)
@@ -180,8 +226,8 @@ class PackageTable(QWidget):
 
     def _on_check_changed(self) -> None:
         win = self.window()
-        if hasattr(win, "_refresh_add_button"):
-            win._refresh_add_button()
+        if hasattr(win, "_refresh_buttons"):
+            win._refresh_buttons()
 
     def selected_entries(self) -> list[DesktopEntry]:
         result = []
@@ -199,9 +245,7 @@ class PackageTable(QWidget):
             cb.blockSignals(False)
         self._on_check_changed()
 
-    # ---------- 刷新状态列 ----------
     def refresh_status(self) -> None:
-        """重新检查桌面，刷新「已添加」状态列。"""
         desktop_dir = get_desktop_dir()
         for r in range(self.table.rowCount()):
             item = self.table.item(r, COL_PACKAGE)
@@ -211,7 +255,6 @@ class PackageTable(QWidget):
             if entry is None:
                 continue
             entry.already_added = self._check_added(entry.path, desktop_dir)
-
             status_item = self.table.item(r, COL_STATUS)
             if status_item:
                 status_item.setText(self._status_text(entry))
@@ -231,38 +274,33 @@ class PackageTable(QWidget):
                 return True
         return False
 
-    # ---------- 语言切换 ----------
     def retranslate(self) -> None:
-        """重新设置所有静态字符串（语言切换时调用）。"""
+        self.search_label.setText(self.tr("Search:"))
+        self.search_edit.setPlaceholderText(self.tr("Filter by name or path"))
         self.sort_label.setText(self.tr("Sort:"))
         self._refresh_sort_options()
-        self.table.setHorizontalHeaderLabels([
-            self.tr("Package"),
-            self.tr("Path"),
-            self.tr("Installed"),
-            self.tr("Status"),
-            self.tr("Select"),
-        ])
+        self._refresh_headers()
         self._populate()
 
+
+# ---------- 主窗口 ----------
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle(__app_display_name__)
-        self.resize(920, 620)
+        self.resize(960, 640)
+
+        self._loading: LoadingDialog | None = None
 
         self._build_ui()
         self._build_menu()
-        self._load_data()
+        self._start_scan()
 
-        # 监听深浅色切换，实时应用主题
-        from PySide6.QtWidgets import QApplication
         app = QApplication.instance()
         if app is not None:
             theme.watch_color_scheme(app, callback=self._on_theme_changed)
 
-    # ---------- UI ----------
     def _build_ui(self) -> None:
         central = QWidget()
         self.setCentralWidget(central)
@@ -270,18 +308,21 @@ class MainWindow(QMainWindow):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
-        # 标签页
         self.tabs = QTabWidget()
         root.addWidget(self.tabs, stretch=1)
 
-        # 底部按钮栏
         bottom = QWidget()
         bottom_layout = QHBoxLayout(bottom)
         bottom_layout.setContentsMargins(12, 8, 12, 12)
 
-        self.status_label = QLabel("")
+        self.status_label = QLabel(self.tr("Scanning…"))
         bottom_layout.addWidget(self.status_label)
         bottom_layout.addStretch()
+
+        self.remove_btn = QPushButton(self.tr("Remove selected"))
+        self.remove_btn.setEnabled(False)
+        self.remove_btn.clicked.connect(self._on_remove_clicked)
+        bottom_layout.addWidget(self.remove_btn)
 
         self.add_btn = QPushButton(self.tr("Add"))
         self.add_btn.setObjectName("primary")
@@ -295,55 +336,94 @@ class MainWindow(QMainWindow):
         self.snap_table: PackageTable | None = None
 
     def _build_menu(self) -> None:
-        """菜单栏：About 入口。"""
         menubar = self.menuBar()
-
-        # Help 菜单
         help_menu = menubar.addMenu(self.tr("Help"))
-
         about_action = QAction(self.tr("About"), self)
         about_action.setShortcut(QKeySequence("F1"))
         about_action.triggered.connect(self._show_about)
         help_menu.addAction(about_action)
 
-    # ---------- 数据 ----------
-    def _load_data(self) -> None:
+    # ---------- 扫描 ----------
+    def _start_scan(self) -> None:
         desktop_dir = get_desktop_dir()
-        deb_entries = scan_deb(desktop_dir)
-        snap_entries = scan_snap(desktop_dir)
+        self._scan_worker = _ScanWorker(desktop_dir, self)
+        self._scan_worker.finished_scan.connect(self._on_scan_finished)
+        self._scan_worker.progress.connect(self._on_scan_progress)
+        self._scan_worker.stage_changed.connect(self._on_stage_changed)
+        self._scan_worker.start()
 
-        self.deb_table = PackageTable(deb_entries, source="deb")
-        self.snap_table = PackageTable(snap_entries, source="snap")
+        from PySide6.QtCore import QTimer
+        QTimer.singleShot(0, self._show_loading)
+
+    def _show_loading(self) -> None:
+        self._loading = LoadingDialog(self)
+        self._loading.show()
+        self._center_loading()
+
+    def _center_loading(self) -> None:
+        if self._loading is None:
+            return
+        parent_geo = self.geometry()
+        dlg_geo = self._loading.frameGeometry()
+        dlg_geo.moveCenter(parent_geo.center())
+        self._loading.move(dlg_geo.topLeft())
+
+    def _on_stage_changed(self, stage: str) -> None:
+        if self._loading is not None:
+            self._loading.set_stage(stage)
+
+    def _on_scan_progress(self, stage: str, current: int, total: int, name: str) -> None:
+        if self._loading is not None:
+            self._loading.set_progress(current, total, name)
+
+    def _on_scan_finished(self, deb_entries, snap_entries) -> None:
+        self.deb_table = PackageTable(source="deb")
+        self.snap_table = PackageTable(source="snap")
+
+        self.deb_table.set_entries(deb_entries)
+        self.snap_table.set_entries(snap_entries)
+
+        for table in (self.deb_table, self.snap_table):
+            for _, cb in table._iter_checkboxes():
+                cb.stateChanged.connect(self._refresh_buttons)
 
         self.tabs.addTab(self.deb_table, self.tr("deb packages ({n})").format(n=len(deb_entries)))
         self.tabs.addTab(self.snap_table, self.tr("snap packages ({n})").format(n=len(snap_entries)))
+        self.tabs.currentChanged.connect(lambda _: self._refresh_buttons())
 
-        self.tabs.currentChanged.connect(lambda _: self._refresh_add_button())
         self.status_label.setText(
             self.tr("deb: {d} · snap: {s}").format(d=len(deb_entries), s=len(snap_entries))
         )
-        self._refresh_add_button()
+        self._refresh_buttons()
+
+        if self._loading is not None:
+            self._loading.accept()
+            self._loading = None
 
     # ---------- 状态刷新 ----------
     def _current_table(self) -> PackageTable | None:
         w = self.tabs.currentWidget()
         return w if isinstance(w, PackageTable) else None
 
-    def _refresh_add_button(self) -> None:
+    def _refresh_buttons(self) -> None:
         table = self._current_table()
         if table is None:
             self.add_btn.setEnabled(False)
+            self.remove_btn.setEnabled(False)
             return
-        self.add_btn.setEnabled(len(table.selected_entries()) > 0)
 
-    # ---------- 主题切换回调 ----------
+        selected = table.selected_entries()
+        has_added = any(e.already_added for e in selected)
+        has_not_added = any(not e.already_added for e in selected)
+
+        self.add_btn.setEnabled(has_not_added)
+        self.remove_btn.setEnabled(has_added)
+
     def _on_theme_changed(self) -> None:
-        """系统深浅色切换时刷新表格颜色。"""
         for table in (self.deb_table, self.snap_table):
             if table is not None:
                 table.refresh_status()
 
-    # ---------- 关于 ----------
     def _show_about(self) -> None:
         dlg = AboutDialog(self)
         dlg.exec()
@@ -353,7 +433,7 @@ class MainWindow(QMainWindow):
         table = self._current_table()
         if table is None:
             return
-        entries = table.selected_entries()
+        entries = [e for e in table.selected_entries() if not e.already_added]
         if not entries:
             return
 
@@ -404,12 +484,48 @@ class MainWindow(QMainWindow):
 
         table.set_all_checked(False)
         table.refresh_status()
-        self._refresh_add_button()
+        self._refresh_buttons()
 
-    # ---------- 语言切换（可选，供未来扩展） ----------
+    # ---------- 移除 ----------
+    def _on_remove_clicked(self) -> None:
+        table = self._current_table()
+        if table is None:
+            return
+        entries = [e for e in table.selected_entries() if e.already_added]
+        if not entries:
+            QMessageBox.information(self, self.tr("Done"), self.tr("Nothing to remove."))
+            return
+
+        confirm = QMessageBox.question(
+            self,
+            self.tr("Remove selected"),
+            self.tr("Remove {n} shortcut(s) from the desktop?").format(n=len(entries)),
+        )
+        if confirm != QMessageBox.Yes:
+            return
+
+        desktop_dir = get_desktop_dir()
+        results = remove_many(entries, desktop_dir)
+
+        removed = sum(1 for r in results if r.status == "removed")
+        not_found = sum(1 for r in results if r.status == "not_found")
+        errors = [r for r in results if r.status == "error"]
+
+        msg = self.tr("Removed {n} from desktop.").format(n=removed)
+        if not_found:
+            msg += "\n" + self.tr("Skipped {n}.").format(n=not_found)
+        if errors:
+            msg += "\n" + self.tr("Failed {n}:").format(n=len(errors)) + "\n" + "\n".join(
+                f"  {e.package}: {e.message}" for e in errors
+            )
+        QMessageBox.information(self, self.tr("Done"), msg)
+
+        table.set_all_checked(False)
+        table.refresh_status()
+        self._refresh_buttons()
+
+    # ---------- 语言切换 ----------
     def changeEvent(self, event):
-        """语言切换时会触发 LanguageChange 事件，刷新字符串。"""
-        from PySide6.QtCore import QEvent
         if event.type() == QEvent.LanguageChange:
             self.retranslate()
         super().changeEvent(event)
@@ -417,7 +533,7 @@ class MainWindow(QMainWindow):
     def retranslate(self) -> None:
         self.setWindowTitle(__app_display_name__)
         self.add_btn.setText(self.tr("Add"))
-        if self.deb_table:
-            self.deb_table.retranslate()
-        if self.snap_table:
-            self.snap_table.retranslate()
+        self.remove_btn.setText(self.tr("Remove selected"))
+        for t in (self.deb_table, self.snap_table):
+            if t is not None:
+                t.retranslate()
