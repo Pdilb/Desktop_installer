@@ -4,7 +4,7 @@ Hash: SHA512
 Origin: Pdilb
 Label: Desktop Installer
 Codename: stable
-Date: Fri, 16 Oct 2026 11:23:21 UTC
+Date: Fri, 13 Nov 2026 12:57:07 UTC
 Architectures: amd64 arm64
 Components: main
 Description: APT repository for desktop_installer
@@ -40,17 +40,17 @@ SHA256:
  33ae81d289d29525394e0d0dd237d3334ad8c9c52decfdb12305198c88fd6bc3 126 main/source/Release
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEQ1Gl62OUk5RVF/It4uq6jm6x0e4FAmrSCSkACgkQ4uq6jm6x
-0e6EexAAntOiXeztXadakR04Iqviid6YKBMu7fSvcb6/6wmoYFAfrJbQU1zkzerH
-xx5FDS5/XvyHxHiKb4wHjNKNYEs+J15KTTWut3BsTXI2966JYZN2I69cV5Km67lt
-Y7WhNFGEHNfkWzIzoGuTijpxr3TjrB0xU4jjiOA4Iee6I4xkPlMwtrvhecBiI6NM
-2Tr/8Vrsx7Y9h9mL/B2pWhiYCIPGvw0QDRSlz6anxbngTH1ydQ3tX9Bbq+z7Pi9O
-dejWZxZ/7feq5qMjdY/lF2d89pPePVZFDcTXpPlN9uz9TUqnbgLwOcDcz7C3YMEf
-ymLudS0/7scj8S8JaUu+LuUeXBKcga8fAWrvRvUxNEeVQnBxQVcJE2vlhH6Y74//
-b2ajqaY216eM29BVrvZrvPR3zJL3M5iLdMcZNRDYoR4DgmqaqzQbN61j1HFa3DTC
-Mt8vBladkBOT39FdScXYzve+xl/3i3IIRGB/cqwRwCFGInpBKyEfZi0OA0mEmS7M
-n6EBHi/mQDVjALU1WTGL+ETZq1vjXl4Bu1EgEggqwCTTb4OZvzizjjtdJulr8Elh
-cNGNguHuBn/VDtN4IjrykoSmOCoVp80UdBtN52AJRFyP1oFHPj2g4Nz43llFLV0+
-uGyNa/RnjzxoLq0LadpCeXEz0PFX0hDVFpCHtK3jPb3Uf0rBbCc=
-=yxMC
+iQIzBAEBCgAdFiEEQ1Gl62OUk5RVF/It4uq6jm6x0e4FAmr3CSMACgkQ4uq6jm6x
+0e4ozQ/+IQpuiJOCHmQ7fuACmntdt/j0kLrj+wG4No1JxUf+uO6uUADwZPQlfGHe
+bnT4LVFiFmiWwRHgHPZ47lyJYGEqkwcA8kYBLW2BGDm+JxW/hEh/cXoj9tN+q4yW
+C4tw1SGfG0iJ2PJgGB3fGjtNNNBUQBQc7T7dSZyz46lEbgzk9VfTZvBK66muJ7rP
+EiUDYpeDX5Ui30ghf/A9pMYjcwW/eO/UqCFYnvkHIlFfXcrRvhC2GoPDizuhyAaA
+ASp5a+rir14x/j1WtbKM/HlKeHJbN3yHPQhXXGjb1cPa+RskNYk+ysaDDrbnoNzd
+hc4IN0oAcsP8+qXKAPV5SjpGofvFtcHhMFIf6E9T6BOJXFpPEG7Zg5O5mll6/qaJ
+7tgLa/tErCTt8DUJJS9UM6iYGa7tOJ7bxVktM/FWncsis50DuI+Pi7nNaS1C9HnK
+UFGBHkymhQPTAikqmgKOfQ2j2T5eO9NzJVWvbbnNQgHskhSNTefif5+To3zFdePq
+1S85BB1PlKqqwdRGGAWiy5OWHoHwxii3+yhi8ExqA1SHI7mHk1p47RypGOoEJnRX
+klNWlzat+xwBogw5fWA2+N0N7D/XTUjTVuG3Bvzkq9PZ063EW2OxJVQhZc4uEI9J
+iz6Dum5twEqUyMyF/Ke+4xPAaoz6viG2QjDHdF/knNYJ+4SqqXE=
+=Qdwt
 -----END PGP SIGNATURE-----
